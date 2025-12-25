@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>分段背景文本轮播</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 关键修改：让容器自适应屏幕 */
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* 避免页面滚动 */
+        }
+
+        .background-container {
+            /* 容器占满整个屏幕 */
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            /* 背景图自适应核心配置 */
+            background: url("gt.png") no-repeat center center;
+            background-size: cover; /* 图片覆盖容器，保持比例，可能裁剪边缘 */
+            /* 可选：如果希望完整显示图片（可能有黑边），用 contain 替代 cover */
+            /* background-size: contain; */
+        }
+
+        /* 分段区域保持百分比高度，随容器尺寸变化 */
+        .text-area {
+            position: absolute;
+            width: 100%;
+            height: 33.33%;
+            overflow: hidden;
+        }
+
+        #area1 { top: 0; left: 0; }
+        #area2 { top: 33.33%; left: 0; }
+        #area3 { bottom: 0; left: 0; }
+
+        .text-box {
+            position: absolute;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            font-size: 14px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 1s ease;
+            /* 移除 white-space: nowrap; 允许换行 */
+            /* 新增换行控制 */
+            overflow-wrap: break-word; /* 强制长单词/字符换行 */
+            word-wrap: break-word; /* 兼容旧浏览器 */
+            max-width: 80%; /* 限制最大宽度（避免过宽超出屏幕） */
+            z-index: 10;
+        }
+
+        /* 小屏幕适配同步调整 */
+        @media (max-width: 375px) {
+            .text-box {
+                font-size: 12px;
+                padding: 6px 12px;
+                max-width: 90%; /* 小屏幕放宽一点比例 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-container">
+        <div class="text-area" id="area1"></div>
+        <div class="text-area" id="area2"></div>
+        <div class="text-area" id="area3"></div>
+    </div>
+
+    <script>
+        const textLists = {
+            area1: ["这次，我可以成为你朋友了吗",
+                    "我求你，佐庭，替我赢下那场战争吧",
+                    "从今以后，我，金雅梅，与你此生不复相见",
+                    "金，你才是天空的灯火", 
+                    "金，腹部中刀，不会致命，心脏才会...",
+                    "现在，我没有遗憾了",
+                    "我把那颗伯利恒之星留给你",
+                    "沈月之，走！我们不要把这个世界让给蠢货。小爷我跟你一起发疯"],
+            area2: ["为之荣耀而历经坎坷，为之人权而先丧人权",
+                    "我们一起面对吧，无论是那些男人，还是这个乱世",
+                    "失败，是放弃的理由吗",
+                    "她早知道会有命运清算的一天，她从一开始就决定替你去死",
+                    "赫拉---我在你身后，我永远都会替你兜底！",
+                    "易澄，其实，你是一个很温柔的人",
+                    "匣中三尺剑，犹做风雨声",
+                    "你有直面黑暗的勇气吗？金雅梅",
+                    "爱并未因肉体的分离，或现实的残酷而消逝，反而在记忆与静默中获得了永恒"],
+            area3: ["签订终身，缔结白头之约；愿使，比翼齐飞，山川共仰。此誓，天地为证。", 
+                    "容儿，你自由了", 
+                    "我的理想是家国铁路，而我的信仰，是你容葵",
+                    "容儿，你不是野草，你是向日葵，你是玫瑰",
+                    "大鹏一日同风起，扶摇直上九万里",
+                    "我的未来里，没有你了",
+                    "火车不会停下，但火车上的人会停下",
+                    "小甜心，这里，是你的家"]
+        };
+
+        const switchInterval = 3000;
+
+        function initTextBoxes() {
+            Object.keys(textLists).forEach(areaId => {
+                const area = document.getElementById(areaId);
+                const texts = textLists[areaId];
+                const areaRect = area.getBoundingClientRect();
+
+                texts.forEach((text, index) => {
+                    const textBox = document.createElement("div");
+                    textBox.className = "text-box";
+                    textBox.textContent = text;
+                    textBox.dataset.index = index;
+
+                    // 文本框位置随区域尺寸动态计算（适配各种屏幕）
+                    const maxTop = areaRect.height - 40;
+                    const maxLeft = areaRect.width - 150;
+                    const randomTop = Math.floor(Math.random() * maxTop);
+                    const randomLeft = Math.floor(Math.random() * maxLeft);
+                    textBox.style.top = `${randomTop}px`;
+                    textBox.style.left = `${randomLeft}px`;
+
+                    area.appendChild(textBox);
+                });
+
+                startTextCarousel(areaId);
+            });
+        }
+
+        function startTextCarousel(areaId) {
+            const area = document.getElementById(areaId);
+            const textBoxes = area.querySelectorAll(".text-box");
+            const total = textBoxes.length;
+            let currentIndex = 0;
+
+            function switchTextBox() {
+                textBoxes.forEach(box => {
+                    box.style.opacity = 0;
+                });
+                textBoxes[currentIndex].style.opacity = 1;
+                currentIndex = (currentIndex + 1) % total;
+            }
+
+            switchTextBox();
+            setInterval(switchTextBox, switchInterval);
+        }
+
+        window.onload = initTextBoxes;
+    </script>
+</body>
+</html>
